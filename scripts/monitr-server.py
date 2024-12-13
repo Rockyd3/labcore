@@ -3,6 +3,7 @@ from pathlib import Path
 
 import panel as pn
 pn.extension()
+pn.extension('floatpanel')
 
 from labcore.analysis.hvapps import DataSelect, DDH5LoaderNode
 
@@ -19,6 +20,7 @@ def refilter_data_select(*events):
     ds.data_select()
 
 search_data_typed = ds.param.watch(refilter_data_select, ['search_term'])
+
 
 pn.template.BootstrapTemplate(
     site="labcore",

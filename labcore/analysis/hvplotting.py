@@ -109,6 +109,12 @@ class Node(pn.viewable.Viewer):
             self.data_in = data_in
             self.process()
 
+        #base zoom info:
+        self.startX = 0
+        self.startY = 0
+        self.endX = 0
+        self.endY = 0
+
     @staticmethod
     def render_data(data: Optional[Data]) -> DataDisplay:
         """Shows data as renderable object.
@@ -323,6 +329,7 @@ class Node(pn.viewable.Viewer):
         -------
         A dedicated plotting node.
         """
+        # Setup/create graph
         if self.plot_type_select.value == "Value":
             if not isinstance(self._plot_obj, ValuePlot):
                 if self._plot_obj is not None:
@@ -330,6 +337,11 @@ class Node(pn.viewable.Viewer):
                 self._plot_obj = ValuePlot(name="plot")
                 self.append(self._plot_obj)
                 self._plot_obj.data_in = self.data_out
+                #self._plot_obj.set_zoom_info(self.startX, self.endX, self.startY, self.endY)
+                print("Is NOT already instance of ValuePlot")
+            else:
+                print("Was already a ValuePlot instance")
+                #self._plot_obj.set_zoom_info(self.startX, self.endX, self.startY, self.endY)
 
         elif self.plot_type_select.value == "Readout hist.":
             if not isinstance(self._plot_obj, ComplexHist):
@@ -354,6 +366,22 @@ class Node(pn.viewable.Viewer):
         if other in self._watchers:
             self.param.unwatch(self._watchers[other])
             del self._watchers[other]
+
+    # Save the current zoom/scroll location of the plot
+    def save_plot_zoom(self, plot):
+        if plot is None or isinstance(plot,str): return
+        print(f"sanity check: {type(plot)}")
+        while isinstance(plot, pn.layout.base.Column):
+            plot = plot.objects[1]
+        self.startX,self.endX = plot.range('x')
+        self.startY,self.endY = plot.range('y')
+
+    def set_plot_zoom(self):
+        if(self.startX == self.endX or self.startY == self.endY):
+            return self._plot_obj
+        return self._plot_obj.redim.range(x=(self.startX,self.endX), y=(self.startY,self.endY))
+
+    
 
 class ReduxNode(Node):
     OPTS = ["None", "Mean"]
@@ -467,6 +495,8 @@ class ValuePlot(Node):
     def __init__(self, *args, **kwargs):
         self.xy_select = XYSelect()
         self._old_indep = []
+        self.save_zoom = False
+        #self.binded_plot = pn.bind(self.plot_panel)
         
         super().__init__(*args, **kwargs)
 
@@ -474,6 +504,7 @@ class ValuePlot(Node):
             self.plot_options_panel,
             self.plot_panel,
         )
+
 
     def __panel__(self):
         return self.layout
@@ -531,8 +562,19 @@ class ValuePlot(Node):
                 plot = plot_xr_as_2d(self.data_out, x, y, dim_labels=self.dim_labels())
             else:
                 raise NotImplementedError
+        
+        # Set the zoom (if there's a zoom saved)
+        # if self.save_zoom:
+        #     plot = plot.redim.range(x=(self.startX,self.endX), y=(self.startY,self.endY))
 
         return plot
+    
+    def set_zoom_info(self, startX, endX, startY, endY):
+        self.startX = startX
+        self.endX = endX
+        self.startY = startY
+        self.endY = endY
+        self.save_zoom = True
 
 
 class ComplexHist(Node):

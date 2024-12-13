@@ -339,7 +339,9 @@ class LoaderNodeBase(Node):
         self.info_label = pn.widgets.StaticText(name="Info", align="start")
         self.info_label.value = "No data loaded."
 
+        # Create a buffer so autoreload doesn't reset scrolling
         self.buffer_col = pn.Column(height=300, width=0)
+        # Create the graph & graph options selection
         self.plot_col = pn.Column(objects = self.plot)
 
         self.layout = pn.Column(
@@ -351,11 +353,28 @@ class LoaderNodeBase(Node):
                 self.refresh,
             ),
             self.display_info,
+        )
+
+        self.data_specific = pn.Column(
+            self.display_info,
             pn.Row(
                 self.buffer_col,
                 self.plot_col
             )
         )
+
+        ### FLOAT PANEL TESTING
+        floatpanel = pn.FloatPanel(self.data_specific, name='Basic FloatPanel', margin=20)
+        
+        self.layout.append(pn.Column('**Example: Basic `FloatPanel`**', floatpanel, height=250))
+
+
+        # self.layout.append(
+        #     pn.Row(
+        #         self.buffer_col,
+        #         self.plot_col
+        #     )
+        # )
 
         self.lock = asyncio.Lock()
 
