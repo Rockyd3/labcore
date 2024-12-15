@@ -286,34 +286,50 @@ class LoaderNodeManager:
     Each time new data is loaded this creates a new DDH5 loader Node and loads
     the selected data."""
 
-    file_path = param.Parameter(None)
+    # file_path = param.Parameter(None)
 
     def __init__(self, Loaders):
-        self.loader_nodes = Loaders
+        self.loader_nodes = Loaders[1:len(Loaders)]
+        self.main = Loaders[0]
+        self.active = 0
 
-        # self.popout_button = pn.widgets.Button(
-        #     name="Pop Out Graph", align="end", button_type="primary"
-        # )
-        # self.popout_button.on_click(self.popout)
+        self.floating_plots = pn.Row(objects = [])
+
+        self.popout_button = pn.widgets.Button(
+            name="Pop Out Graph", align="end", button_type="primary"
+        )
+        self.popout_button.on_click(self.popout)
 
         self.layout = pn.Column(
-            pn.Row(
-                objects = self.loader_nodes,
-            ),
+            self.main,
+            self.popout_button,
+            self.floating_plots
         )
 
     def __panel__(self) -> pn.viewable.Viewable:
         return self.layout
     
-    # def popout(self, *events: param.parameterized.Event):
-    #     floatpanel = pn.FloatPanel(self.main, name='Basic FloatPanel', margin=20)
-    #     self.FloatingNodes.append(pn.Column('**Example: Basic `FloatPanel`**', floatpanel, height=250))
-    #     self.main = DDH5LoaderNode()
+    def popout(self, *events: param.parameterized.Event):
+        if self.active >= len(self.loader_nodes):
+            return
+        # Load current data to another node and create floating panel
+        floatpanel = pn.FloatPanel(self.loader_nodes[self.active], name=str(self.loader_nodes[self.active].file_path), margin=20)
 
-    @pn.depends("file_path")
-    def set_path(self):
-        for l in self.loader_nodes:
-            l.set_file_path(self.file_path)
+        self.active += 1
+
+        self.floating_plots.objects = [floatpanel]
+        self.layout = pn.Column(
+            self.main,
+            self.popout_button,
+            self.floating_plots
+        )
+        print("popped out")
+
+    # @pn.depends("file_path")
+    # def set_path(self):
+    #     for l in self.loader_nodes:
+    #         l.set_file_path(self.file_path)
+    #     print(f"Set {self.file_path}")
 
 
 class LoaderNodeBase(Node):
@@ -397,9 +413,11 @@ class LoaderNodeBase(Node):
             )
         )
 
+        config = {"headerControls" : {"close":"remove", "maximize":"remove"}}
+
         #Floating Panel Example:
-        floatpanel = pn.FloatPanel(self.layout, name='Basic FloatPanel', margin=20)
-        self.layout = pn.Column('**Example: Basic `FloatPanel`**', floatpanel, height=250)
+        # floatpanel = pn.FloatPanel(self.layout, name='Basic FloatPanel', margin=20, config=config)
+        # self.layout = pn.Column(floatpanel, height=250)
 
         self.lock = asyncio.Lock()
 

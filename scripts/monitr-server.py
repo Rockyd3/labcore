@@ -8,8 +8,12 @@ pn.extension('floatpanel')
 from labcore.analysis.hvapps import DataSelect, DDH5LoaderNode, LoaderNodeManager
 
 ds = DataSelect('.')
-loader = DDH5LoaderNode()
-Loader_nodes = [loader, DDH5LoaderNode()]
+
+# Create Loader nodes for the max number of graphs
+Loader_nodes = []
+for i in range(4):
+    Loader_nodes.append(DDH5LoaderNode())
+
 load_multiple = LoaderNodeManager(Loader_nodes)
 
 def data_selected_cb(*events):
