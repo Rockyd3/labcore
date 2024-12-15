@@ -280,6 +280,41 @@ selector_stylesheet = """
 }
 """
 
+class LoaderNodeManager:
+    """A class used to create/manage multiple graphs of data.
+    
+    Each time new data is loaded this creates a new DDH5 loader Node and loads
+    the selected data."""
+
+    file_path = param.Parameter(None)
+
+    def __init__(self, Loaders):
+        self.loader_nodes = Loaders
+
+        # self.popout_button = pn.widgets.Button(
+        #     name="Pop Out Graph", align="end", button_type="primary"
+        # )
+        # self.popout_button.on_click(self.popout)
+
+        self.layout = pn.Column(
+            pn.Row(
+                objects = self.loader_nodes,
+            ),
+        )
+
+    def __panel__(self) -> pn.viewable.Viewable:
+        return self.layout
+    
+    # def popout(self, *events: param.parameterized.Event):
+    #     floatpanel = pn.FloatPanel(self.main, name='Basic FloatPanel', margin=20)
+    #     self.FloatingNodes.append(pn.Column('**Example: Basic `FloatPanel`**', floatpanel, height=250))
+    #     self.main = DDH5LoaderNode()
+
+    @pn.depends("file_path")
+    def set_path(self):
+        for l in self.loader_nodes:
+            l.set_file_path(self.file_path)
+
 
 class LoaderNodeBase(Node):
     """A node that loads data.
@@ -355,26 +390,16 @@ class LoaderNodeBase(Node):
             self.display_info,
         )
 
-        self.data_specific = pn.Column(
-            self.display_info,
+        self.layout.append(
             pn.Row(
                 self.buffer_col,
                 self.plot_col
             )
         )
 
-        ### FLOAT PANEL TESTING
-        floatpanel = pn.FloatPanel(self.data_specific, name='Basic FloatPanel', margin=20)
-        
-        self.layout.append(pn.Column('**Example: Basic `FloatPanel`**', floatpanel, height=250))
-
-
-        # self.layout.append(
-        #     pn.Row(
-        #         self.buffer_col,
-        #         self.plot_col
-        #     )
-        # )
+        #Floating Panel Example:
+        floatpanel = pn.FloatPanel(self.layout, name='Basic FloatPanel', margin=20)
+        self.layout = pn.Column('**Example: Basic `FloatPanel`**', floatpanel, height=250)
 
         self.lock = asyncio.Lock()
 
@@ -458,6 +483,7 @@ class DDH5LoaderNode(LoaderNodeBase):
 
     """
 
+    # Parameterized file_path (connects to data_select when there's one LoaderNode)
     file_path = param.Parameter(None)
 
     def __init__(self, path: Union[str, Path] = "", *args: Any, **kwargs: Any):
@@ -472,14 +498,25 @@ class DDH5LoaderNode(LoaderNodeBase):
         """
         super().__init__(*args, **kwargs)
         self.file_path = path
+        # Non-paramaterized file_path, used by LoaderNodeManager for multiple LoaderNodes
+        self.np_file_path = None
+        self.use_np = False
 
     def load_data(self) -> DataDict:
         """
         Load data from the file location specified
         """
+        path = self.file_path
+        if self.use_np:
+            path = self.np_file_path
+
         # Check in case no data is selected
-        if str(self.file_path) == "":
+        if str(path) == "":
             self.info_label.value = "Please select data to load. If there is no data, trying running in a higher directory."
             return None
 
-        return datadict_from_hdf5(self.file_path.absolute())
+        return datadict_from_hdf5(path.absolute())
+    
+    def set_file_path(self, path):
+        self.np_file_path = path
+        self.use_np = True
